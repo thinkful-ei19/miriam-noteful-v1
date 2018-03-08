@@ -27,6 +27,7 @@ function requestLogger(req, res, next) {
 
 app.use(express.static('public'));
 
+app.use(express.json());
 
 app.use(requestLogger);
 
@@ -84,10 +85,37 @@ app.get('/api/notes/:id', (req, res, next) => {
         if (item) {
             return res.json(item);
         } else {
-            res.status(404).json({ message: 'Not Found' });
+        //    res.status(404).json({ message: 'ID Not Found' });
+        next();  // will trigger the 404 from the app.use first catch
         }
     });
 })
+
+app.put('/api/notes/:id', (req, res, next) => {
+    const { id } = req.params;
+  
+    /***** Never trust users - validate input *****/
+    const updateObj = {};
+    const updateFields = ['title', 'content'];
+  
+    updateFields.forEach(field => {
+      if (field in req.body) {
+        updateObj[field] = req.body[field];
+      }
+    });
+  
+    notes.update(id, updateObj, (err, item) => {
+      if (err) {
+        return next(err);
+      }
+      if (item) {
+        res.json(item);
+      } else {
+        next();
+      }
+    });
+  });
+
 
 app.get('/boom', (req, res, next) => {
     throw new Error('Boom!!');

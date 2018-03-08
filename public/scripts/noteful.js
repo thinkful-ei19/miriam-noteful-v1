@@ -17,6 +17,7 @@ const noteful = (function () {
    * GENERATE HTML FUNCTIONS
    */
   function generateNotesList(list, currentNote) {
+    console.log(list);
     const listItems = list.map(item => `
     <li data-id="${item.id}" class="js-note-element ${currentNote.id === item.id ? 'active' : ''}">
       <a href="#" class="name js-note-show-link">${item.title}</a>
@@ -68,8 +69,35 @@ const noteful = (function () {
   function handleNoteFormSubmit() {
     $('.js-note-edit-form').on('submit', function (event) {
       event.preventDefault();
+      console.log(event);
 
-      console.log('Submit Note, coming soon...');
+      const editForm = $(event.currentTarget);
+
+      console.log('event.currentTarget = ', editForm)
+      
+      const noteObj = {
+        title: editForm.find('.js-note-title-entry').val(),
+        content: editForm.find('.js-note-content-entry').val()
+      };
+
+      console.log('noteObj in handleNoteFormSubmit');
+
+      noteObj.id = store.currentNote.id;
+
+      /* Preferable to use server for groung truth (server might not save what was 
+        passed in; server might have code to fix errors;) */
+      api.update(noteObj.id, noteObj, updateResponse => {
+        store.notes.forEach(function(note) {
+          if(note.id === noteObj.id) {
+            note.title = updateResponse.title;
+            note.content = updateResponse.content;
+          }
+        })
+        console.log(store);
+        store.currentNote = updateResponse;
+
+        render();
+      });
 
     });
   }
@@ -95,7 +123,6 @@ const noteful = (function () {
   function bindEventListeners() {
     handleNoteItemClick();
     handleNoteSearchSubmit();
-
     handleNoteFormSubmit();
     handleNoteStartNewSubmit();
     handleNoteDeleteClick();
