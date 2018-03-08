@@ -69,69 +69,72 @@ const noteful = (function () {
   function handleNoteFormSubmit() {
     $('.js-note-edit-form').on('submit', function (event) {
       event.preventDefault();
-      console.log(event);
-
       const editForm = $(event.currentTarget);
-
-      console.log('event.currentTarget = ', editForm)
-      
       const noteObj = {
+        id: store.currentNote.id,
         title: editForm.find('.js-note-title-entry').val(),
         content: editForm.find('.js-note-content-entry').val()
       };
-
-      console.log('noteObj in handleNoteFormSubmit');
-
-      noteObj.id = store.currentNote.id;
-
-      /* Preferable to use server for groung truth (server might not save what was 
-        passed in; server might have code to fix errors;) */
-      api.update(noteObj.id, noteObj, updateResponse => {
-        store.notes.forEach(function(note) {
-          if(note.id === noteObj.id) {
-            note.title = updateResponse.title;
-            note.content = updateResponse.content;
-          }
-        })
-        console.log(store);
-        store.currentNote = updateResponse;
-
-        render();
-      });
-
+      if (store.currentNote.id) {
+        api.update(store.currentNote.id, noteObj, updateResponse => {
+          store.currentNote = updateResponse;
+          api.search(store.currentSearchTerm, updateResponse => {
+            store.notes = updateResponse;
+            render();
+          });
+        });
+      } else {
+        api.create(noteObj, updateResponse => {
+          store.currentNote = updateResponse;
+          api.search(store.currentSearchTerm, updateResponse => {
+            store.notes = updateResponse;
+            render();
+          });
+        });
+      }
     });
   }
 
   function handleNoteStartNewSubmit() {
     $('.js-start-new-note-form').on('submit', event => {
       event.preventDefault();
-
-      console.log('Start New Note, coming soon...');
-
+      store.currentNote = false;
+      render();
     });
   }
 
   function handleNoteDeleteClick() {
+    console.log('*** in handleNoteDeleteClick()');
     $('.js-notes-list').on('click', '.js-note-delete-button', event => {
       event.preventDefault();
+    
+      const noteId = getNoteIdFromElement(event.currentTarget.parentElement);
 
-      console.log('Delete Note, coming soon...');
+      api.delete(noteId, deleteResponse => {
+        api.search(store.currentSearchTerm, searchResponse => {
+          store.notes = searchResponse;
+          if (noteId === store.currentNote.id) {
+            store.currentNote = {};
+          }
+          render();
+        });
       
+      });
     });
   }
 
-  function bindEventListeners() {
-    handleNoteItemClick();
-    handleNoteSearchSubmit();
-    handleNoteFormSubmit();
-    handleNoteStartNewSubmit();
-    handleNoteDeleteClick();
-  }
+function bindEventListeners() {
+  handleNoteItemClick();
+  handleNoteSearchSubmit();
+  handleNoteFormSubmit();
+  handleNoteStartNewSubmit();
+  handleNoteDeleteClick();
+}
 
-  // This object contains the only exposed methods from this module:
-  return {
-    render: render,
-    bindEventListeners: bindEventListeners,
-  };
+// This object contains the only exposed methods from this module:
+return {
+  render: render,
+  bindEventListeners: bindEventListeners,
+};
 
 }());

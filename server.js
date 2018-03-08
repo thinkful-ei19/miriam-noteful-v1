@@ -4,130 +4,45 @@
 
 const express = require('express');
 
+const morgan = require('morgan');
+
+// ** not in solutions server.js file   need to delete **
+
 const data = require('./db/notes');
-
-const simDB = require('./db/simDB');
-
-const notes = simDB.initialize(data);
 
 const { PORT } = require('./config');
 
+const notesRouter = require('./routers/notes.router');
+
+
+// Create an Express application
 const app = express();
 
-// const port = process.env.PORT || 8080;
+// Log all requests
+app.use(morgan('dev'));
 
-//
-
-function requestLogger(req, res, next) {
-    const now = new Date();   // built in js function
-    console.log(
-        `${now.toLocaleDateString()} ${now.toLocaleTimeString()} ${req.method} ${req.url}`);
-    next();
-}
-
+// Create a static webserve
 app.use(express.static('public'));
 
+//Parse request body
 app.use(express.json());
 
-app.use(requestLogger);
 
-//
+// ** need to change all '/v1' to '/api'
 
-// DATA (data) version-Search the title for user provided searchTerm
-// app.get('/api/notes', (req, res) => {
-//     if (req.query.searchTerm) {
-//         const { searchTerm } = req.query;
-//         const foundTerms = data.filter(note => note.title.includes(searchTerm));
-//         return res.json(foundTerms);
-//     }
-//     res.json(data);
-// });
+// Mount router on "/api"
+app.use('/api', notesRouter);
 
-// DATABASE (notes)-version-Search the title for user provided searchTerm
-app.get('/api/notes', (req, res, next) => {
-    const { searchTerm } = req.query;
-  
-    notes.filter(searchTerm, (err, list) => {        
-        if (err) {
-        return next(err); // goes to error handler
-      }
-      res.json(list); // responds with filtered array
-    });
-  });
-
-//
-
-// Terse solution
-// const { searchTerm } = req.query;
-// res.json(searchTerm ? data.filter(notes => note.title.includes(searchTerm)) : data);
-
-//
-
-// Data version - note by id of item clicked on
-// app.get('/api/notes/:id', (req, res) => {
-//     const { id } = req.params;
-//     const foundItem = data.find(item => item.id === Number(id));
-//     if (foundItem) {
-//         return res.json(foundItem);
-
-//     }
-//     return res.json({ error: 'no item found' });
-// })
-
-// DATABASE version - get note by id 
-app.get('/api/notes/:id', (req, res, next) => {
-    const { id } = req.params;
-
-    notes.find(id, (err, item) => {
-        if (err) {
-            return next(err); // goes to error handler
-        }
-        if (item) {
-            return res.json(item);
-        } else {
-        //    res.status(404).json({ message: 'ID Not Found' });
-        next();  // will trigger the 404 from the app.use first catch
-        }
-    });
-})
-
-app.put('/api/notes/:id', (req, res, next) => {
-    const { id } = req.params;
-  
-    /***** Never trust users - validate input *****/
-    const updateObj = {};
-    const updateFields = ['title', 'content'];
-  
-    updateFields.forEach(field => {
-      if (field in req.body) {
-        updateObj[field] = req.body[field];
-      }
-    });
-  
-    notes.update(id, updateObj, (err, item) => {
-      if (err) {
-        return next(err);
-      }
-      if (item) {
-        res.json(item);
-      } else {
-        next();
-      }
-    });
-  });
-
-
-app.get('/boom', (req, res, next) => {
-    throw new Error('Boom!!');
-  });
-
+// Catch-all 404 errors
 app.use(function (req, res, next) {
-    var err = new Error('Not Found');
+    const err = new Error('Not Found');
     err.status = 404;
     res.status(404).json({ message: 'Not Found' });
+    // ** replace line above with next(err);
 });
 
-
+// Catch-all Error handler
+// NOTE: we'll prevent stacktrace leak in later exercise
 app.use(function (err, req, res, next) {
     res.status(err.status || 500);
     res.json({
@@ -138,6 +53,7 @@ app.use(function (err, req, res, next) {
 
 // Listen for incoming connections
 app.listen(PORT, function () {
+    // ** console.info(`Server listening on ${this.address().port}`);
     console.log(`Server listening on port ${PORT}`);
 }).on('error', err => {
     console, error(err);
