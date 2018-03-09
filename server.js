@@ -52,9 +52,13 @@ app.use(function (err, req, res, next) {
 });
 
 // Listen for incoming connections
-app.listen(PORT, function () {
+if (require.main === module) {
+    app.listen(PORT, function () {
     // ** console.info(`Server listening on ${this.address().port}`);
-    console.log(`Server listening on port ${PORT}`);
+    console.info(`Server listening on $(this.address().port}`);
 }).on('error', err => {
     console, error(err);
-})
+});
+}
+
+module.exports = app; // Export for testing
